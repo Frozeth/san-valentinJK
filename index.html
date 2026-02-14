@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Kathya | Una Historia de Josseph</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Montserrat:wght@200;400&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- RESET & BASE --- */
+        :root {
+            --bg-deep: #0f0505;
+            --bg-gradient: radial-gradient(circle at center, #2b0a0a 0%, #000000 100%);
+            --gold: #d4af37;
+            --gold-light: #f3e5ab;
+            --rose-dust: #c08081;
+            --text-main: #e0e0e0;
+            --glass: rgba(20, 10, 10, 0.65);
+            --border-glass: rgba(212, 175, 55, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-deep);
+            background-image: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            overflow: hidden; /* Evita scroll, es una experiencia SPA */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- FONDO ANIMADO (CANVAS) --- */
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* --- VIGNETTE & TEXTURE --- */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, #000 120%);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .noise {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48ZmlsdGVyIGlkPSJnoiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjY1IiBudW1PY3RhdmVzPSIzIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI2cpIiBvcGFjaXR5PSIwLjAzIi8+PC9zdmc+');
+            opacity: 0.4;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* --- CONTENEDOR PRINCIPAL --- */
+        .stage {
+            z-index: 10;
+            position: relative;
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out, transform 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+            transform: translateY(20px);
+            display: none; /* Se maneja con JS */
+        }
+
+        .stage.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stage.fading-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        /* --- TIPOGRAFÍA --- */
+        h1, h2, .signature {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+        }
+
+        h1 {
+            font-size: 4rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            letter-spacing: -1px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-weight: 200;
+            margin-bottom: 2rem;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .highlight {
+            color: var(--gold-light);
+            font-style: italic;
+        }
+
+        /* --- GLASSMORPHISM CARD --- */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            padding: 3rem;
+            border-radius: 4px; /* Bordes sutiles, no muy redondos para elegancia */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px; right: -1px; bottom: -1px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent 40%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* --- BOTONES --- */
+        .btn-elegant {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 12px 30px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .btn-elegant:hover {
+            background: var(--gold);
+            color: var(--bg-deep);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
+        /* --- TEXTO PROGRESIVO (CLIMAX) --- */
+        .final-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem; 
+            line-height: 1.4;
+            color: var(--text-main);
+            text-align: left;
+        }
+        
+        .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(10px);
+            filter: blur(4px);
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            margin-right: 0.25em; /* Espacio entre palabras */
+        }
+
+        .word.visible {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+        }
+
+        .signature {
+            margin-top: 40px;
+            text-align: right;
+            font-size: 1.8rem;
+            color: var(--rose-dust);
+            opacity: 0;
+            transition: opacity 2s ease 1s; /* Retraso para aparecer */
+        }
+
+        .signature.visible {
+            opacity: 1;
+        }
+
+        /* --- MEDIA QUERIES --- */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .card { padding: 1.5rem; width: 95%; margin: 0 auto;}
+            .final-text { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+    <div class="overlay"></div>
+    <div class="noise"></div>
+
+    <div id="scene-intro" class="stage active">
+        <div class="card">
+            <div style="font-size: 3rem; color: var(--gold); margin-bottom: 20px;">✦</div>
+            <h1>Kathya</h1>
+            <p>He guardado estas palabras para el momento en que el silencio fuera lo suficientemente perfecto para escucharlas.</p>
+            <button class="btn-elegant" onclick="nextScene('scene-intro', 'scene-middle')">Abrir Carta</button>
+        </div>
+    </div>
+
+    <div id="scene-middle" class="stage">
+        <div class="card">
+            <h2 id="phrase-title" style="color: var(--rose-dust); margin-bottom: 20px; font-size: 1.5rem;">fragmento i.</h2>
+            <p id="phrase-text" style="font-size: 1.4rem; font-style: italic;">
+                "A veces pienso que el tiempo se detiene solo para darnos espacio de coincidir."
+            </p>
+            <div style="margin-top: 30px; display: flex; justify-content: center; gap: 10px;">
+                <span style="height: 2px; width: 30px; background: var(--gold); display: block;"></span>
+            </div>
+            <button class="btn-elegant" id="btn-continue" onclick="advancePhrase()">Continuar</button>
+        </div>
+    </div>
+
+    <div id="scene-climax" class="stage">
+        <div class="card" style="border: 1px solid var(--gold);">
+            <div id="typewriter-container" class="final-text">
+                </div>
+            <div id="final-signature" class="signature">
+                — Josseph.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ----------------------------------------------------------------
+           SISTEMA DE PARTÍCULAS (Lujo Visual)
+           ---------------------------------------------------------------- */
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 2; // Partículas pequeñas y elegantes
+                this.speedY = Math.random() * 0.5 + 0.1; // Flotar suavemente hacia arriba
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.opacity = Math.random() * 0.5 + 0.1;
+                this.life = Math.random() * 100;
+                // Color dorado o rojo muy sutil
+                this.color = Math.random() > 0.8 ? '212, 175, 55' : '192, 128, 129'; 
+            }
+
+            update() {
+                this.y -= this.speedY;
+                this.x += this.speedX;
+                this.life--;
+
+                if (this.y < 0 || this.life < 0) {
+                    this.init();
+                    this.y = height;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color}, ${this.opacity})`;
+                ctx.fill();
+                
+                // Glow effect sutil
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = `rgba(${this.color}, 0.5)`;
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 70; i++) { // Cantidad moderada para elegancia
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+        resize();
+        initParticles();
+        animateParticles();
+
+        /* ----------------------------------------------------------------
+           LÓGICA NARRATIVA
+           ---------------------------------------------------------------- */
+        
+        // Datos de la sección intermedia
+        const phrases = [
+            { title: "fragmento i.", text: "Hay caos en el mundo, Kathya, pero en tu mirada siempre encuentro el orden que me falta." },
+            { title: "fragmento ii.", text: "No busco la perfección, busco lo real. Y lo nuestro tiene esa verdad que asusta y fascina a la vez." },
+            { title: "epifanía.", text: "Y entonces entendí que huir del riesgo era huir de la vida misma..." }
+        ];
+
+        let currentPhraseIndex = 0;
+
+        function nextScene(currentId, nextId) {
+            const current = document.getElementById(currentId);
+            const next = document.getElementById(nextId);
+
+            current.classList.add('fading-out');
+            
+            setTimeout(() => {
+                current.classList.remove('active', 'fading-out');
+                next.classList.add('active');
+                
+                // Si vamos a la escena final, iniciar animación de texto
+                if (nextId === 'scene-climax') {
+                    startTypewriterEffect();
+                }
+            }, 1000); // Esperar a que termine la transición CSS
+        }
+
+        function advancePhrase() {
+            const titleEl = document.getElementById('phrase-title');
+            const textEl = document.getElementById('phrase-text');
+            const btn = document.getElementById('btn-continue');
+            const card = document.querySelector('#scene-middle .card');
+
+            // Efecto fade out rápido del contenido
+            textEl.style.opacity = 0;
+            titleEl.style.opacity = 0;
+
+            setTimeout(() => {
+                currentPhraseIndex++;
+
+                if (currentPhraseIndex < phrases.length) {
+                    // Mostrar siguiente frase
+                    titleEl.innerText = phrases[currentPhraseIndex].title;
+                    textEl.innerText = phrases[currentPhraseIndex].text;
+                    
+                    // Fade in
+                    textEl.style.transition = "opacity 1s";
+                    titleEl.style.transition = "opacity 1s";
+                    textEl.style.opacity = 1;
+                    titleEl.style.opacity = 1;
+                } else {
+                    // Ir al clímax
+                    nextScene('scene-middle', 'scene-climax');
+                }
+            }, 600);
+        }
+
+        /* ----------------------------------------------------------------
+           EFECTO DE ESCRITURA PROGRESIVA (CLÍMAX)
+           ---------------------------------------------------------------- */
+        
+        const finalText = "Por primera vez, admitiré que ya no estoy dispuesto a seguir jugando a enamorarme sin entregarme por completo, como si no supiera que ya te he entregado cada fragmento de mí. Quiero poder quererte con toda mi alma, sin preocuparme por lo que venga después.";
+
+        function startTypewriterEffect() {
+            const container = document.getElementById('typewriter-container');
+            const words = finalText.split(" ");
+            
+            container.innerHTML = ""; // Limpiar
+
+            let delay = 0;
+
+            words.forEach((word, index) => {
+                const span = document.createElement("span");
+                span.innerHTML = word + "&nbsp;"; // Palabra + espacio
+                span.className = "word";
+                
+                // Variación sutil en la velocidad para simular pensamiento humano
+                const dynamicDelay = 300; 
+                span.style.transitionDelay = `${delay}ms`;
+                
+                container.appendChild(span);
+                
+                // Añadir un retraso acumulativo
+                delay += dynamicDelay; 
+
+                // Forzar reflow para activar la transición después de añadir al DOM
+                setTimeout(() => {
+                    span.classList.add('visible');
+                }, 100);
+            });
+
+            // Mostrar firma al final de todo el texto
+            setTimeout(() => {
+                document.getElementById('final-signature').classList.add('visible');
+            }, delay + 1500);
+        }
+
+    </script>
+</body>
+</html>
